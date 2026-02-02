@@ -1,0 +1,24 @@
+# Node.js
+node_modules/
+dist/
+build/
+.env
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.pytest_cache/
+*.sqlite
+*.db
+oura_session.json
+oura_config.json
+data.zip
+oura-downloads/
+
+# IDE
+.vscode/
+.idea/

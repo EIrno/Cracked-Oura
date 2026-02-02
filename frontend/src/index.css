@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Disable React Grid Layout animations for instant resize */
+  .react-grid-layout,
+  .react-grid-item,
+  .react-grid-item.cssTransforms,
+  .react-grid-item.resizing,
+  .react-grid-item.react-grid-placeholder {
+    transition: none !important;
+    animation: none !important;
+    transform-style: flat !important;
+    /* Try to prevent 3D transform interpolation */
+  }
+
+}
+
+/* Custom Resize Handle Styles - High Visibility Update (Outside Layer for Specificity) */
+.react-grid-item>.react-resizable-handle {
+  width: 30px !important;
+  height: 30px !important;
+  bottom: 4px !important;
+  right: 4px !important;
+  z-index: 1000 !important;
+  /* Ensure it's above all card content */
+  cursor: se-resize !important;
+  background: transparent !important;
+}
+
+/* Distinct Corner Indicator (Diagonal Grip Lines) */
+.react-grid-item>.react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+
+  /* Diagonal lines pattern */
+  background: linear-gradient(135deg,
+      transparent 0%,
+      transparent 40%,
+      hsl(var(--primary)) 40%,
+      hsl(var(--primary)) 60%,
+      transparent 60%,
+      transparent 80%,
+      hsl(var(--primary)) 80%,
+      hsl(var(--primary)) 100%);
+
+  opacity: 0.5;
+  transition: all 0.2s ease-in-out;
+  /* Ensure no box artifacts */
+  box-shadow: none;
+  border: none;
+  /* Clip to bottom-right triangle for clean look */
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* Hover State */
+.react-grid-item:hover>.react-resizable-handle::after,
+.react-grid-item>.react-resizable-handle:hover::after {
+  opacity: 1;
+  width: 18px;
+  height: 18px;
+
+}

@@ -1,0 +1,344 @@
+{
+    "dashboard": {
+        "dashboards": [
+            {
+                "id": "default",
+                "name": "Daily",
+                "widgets": [
+                    {
+                        "id": "1",
+                        "type": "score",
+                        "title": "Sleep score",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "sleep.score",
+                            "color": "#8AB4F8"
+                        }
+                    },
+                    {
+                        "id": "2",
+                        "type": "score",
+                        "title": "Readiness score",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "readiness.score",
+                            "color": "#4ade80"
+                        }
+                    },
+                    {
+                        "id": "3",
+                        "type": "score",
+                        "title": "Activity score",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "activity.score",
+                            "color": "#f87171",
+                            "dataKeys": [
+                                "sleep.score"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "4",
+                        "type": "trend",
+                        "title": "Sleep hr",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "sleep_session.hr_data",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "sleep_session.hr_data"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "5",
+                        "type": "trend",
+                        "title": "Sleep hrv",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "sleep_session.hrv_data",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "sleep_session.hrv_data"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "7",
+                        "type": "radar",
+                        "title": "Sleep contributors",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "sleep.contributors",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "sleep.contributors"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "8",
+                        "type": "radar",
+                        "title": "Readiness contributors",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "readiness.contributors",
+                            "color": "#4ade80",
+                            "dataKeys": [
+                                "sleep.contributors"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "9",
+                        "type": "radar",
+                        "title": "Activity contributors",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "activity.contributors",
+                            "color": "#f87171",
+                            "dataKeys": [
+                                "sleep.contributors"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "13",
+                        "type": "trend",
+                        "title": "New Widget",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "sleep_session.sleep_phase_5_min",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "sleep_session.sleep_phase_5_min"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "14",
+                        "type": "json",
+                        "title": "New Widget",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "root",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "root"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "15",
+                        "type": "table",
+                        "title": "Sleep stats",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "sleep_session.lowest_heart_rate",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "sleep_session.start_time",
+                                "sleep_session.end_time",
+                                "sleep_session.latency",
+                                "sleep_session.total_sleep_duration",
+                                "sleep_session.deep_sleep_duration",
+                                "sleep_session.rem_sleep_duration",
+                                "sleep_session.light_sleep_duration",
+                                "sleep_session.awake_time",
+                                "sleep_session.average_heart_rate",
+                                "sleep_session.average_hrv",
+                                "sleep_session.average_breath",
+                                "sleep_session.time_in_bed",
+                                "sleep.breathing_disturbance_index",
+                                "sleep.average_spo2",
+                                "sleep_session.lowest_heart_rate"
+                            ]
+                        }
+                    }
+                ],
+                "layout": [
+                    {
+                        "i": "1",
+                        "x": 0,
+                        "y": 0,
+                        "w": 4,
+                        "h": 4,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "2",
+                        "x": 4,
+                        "y": 0,
+                        "w": 4,
+                        "h": 4,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "3",
+                        "x": 8,
+                        "y": 0,
+                        "w": 4,
+                        "h": 4,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "4",
+                        "x": 0,
+                        "y": 8,
+                        "w": 9,
+                        "h": 5,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "5",
+                        "x": 0,
+                        "y": 13,
+                        "w": 9,
+                        "h": 5,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "7",
+                        "x": 0,
+                        "y": 4,
+                        "w": 4,
+                        "h": 4,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "8",
+                        "x": 4,
+                        "y": 4,
+                        "w": 4,
+                        "h": 4,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "9",
+                        "x": 8,
+                        "y": 4,
+                        "w": 4,
+                        "h": 4,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "13",
+                        "x": 0,
+                        "y": 18,
+                        "w": 9,
+                        "h": 5,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "14",
+                        "x": 0,
+                        "y": 23,
+                        "w": 12,
+                        "h": 7,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "15",
+                        "x": 9,
+                        "y": 8,
+                        "w": 3,
+                        "h": 15,
+                        "moved": false,
+                        "static": false
+                    }
+                ]
+            },
+            {
+                "id": "dashboard-1769877426113",
+                "name": "Trends",
+                "widgets": [
+                    {
+                        "id": "1",
+                        "type": "trend",
+                        "title": "Resilience",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "resilience.stress",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "resilience.sleep_recovery",
+                                "resilience.daytime_recovery",
+                                "resilience.stress"
+                            ],
+                            "dateRange": {
+                                "type": "relative",
+                                "value": 69,
+                                "unit": "days",
+                                "anchor": "selected_date"
+                            }
+                        }
+                    },
+                    {
+                        "id": "2",
+                        "type": "trend",
+                        "title": "Cardiovascular age",
+                        "width": "col-span-4",
+                        "height": "h-40",
+                        "config": {
+                            "dataKey": "cardiovascular_age.vascular_age",
+                            "color": "#8AB4F8",
+                            "dataKeys": [
+                                "cardiovascular_age.vascular_age"
+                            ],
+                            "dateRange": {
+                                "type": "relative",
+                                "value": 69,
+                                "unit": "days",
+                                "anchor": "selected_date"
+                            }
+                        }
+                    }
+                ],
+                "layout": [
+                    {
+                        "i": "1",
+                        "x": 0,
+                        "y": 0,
+                        "w": 12,
+                        "h": 7,
+                        "moved": false,
+                        "static": false
+                    },
+                    {
+                        "i": "2",
+                        "x": 0,
+                        "y": 7,
+                        "w": 12,
+                        "h": 6,
+                        "moved": false,
+                        "static": false
+                    }
+                ]
+            }
+        ],
+        "activeDashboardId": "default"
+    }
+}
