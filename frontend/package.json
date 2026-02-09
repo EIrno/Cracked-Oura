@@ -33,6 +33,14 @@
     },
     "win": {
       "icon": "icon.png"
+    },
+    "linux": {
+      "icon": "icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
     }
   },
   "dependencies": {
