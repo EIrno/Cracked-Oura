@@ -55,7 +55,7 @@ class ConfigManager:
         try:
             if not os.path.exists(path):
                 return {}
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     return {}
@@ -69,7 +69,7 @@ class ConfigManager:
         import uuid
         tmp_path = f"{path}.{uuid.uuid4()}.tmp"
         try:
-            with open(tmp_path, 'w') as f:
+            with open(tmp_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4)
                 f.flush()
                 # Ensure write to disk

@@ -401,7 +401,7 @@ if __name__ == "__main__":
             
             try:
                 log_path = os.path.join(get_user_data_dir(), "startup_crash.log")
-                with open(log_path, "w") as f:
+                with open(log_path, "w", encoding="utf-8") as f:
                     f.write(f"Startup Crash: {e}\n")
                     f.write(traceback.format_exc())
             except:
