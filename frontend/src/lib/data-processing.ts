@@ -1,5 +1,122 @@
-import { parseISO, addDays, format } from 'date-fns';
+import { parseISO, addDays, format, startOfWeek, startOfMonth, startOfYear, differenceInDays } from 'date-fns';
 import type { TimeSeriesPoint, NormalizedData } from '@/types/data';
+
+export type AggregationInterval = 'week' | 'month' | 'year';
+export type AggregationMethod = 'avg' | 'median' | 'sum' | 'last';
+
+function toNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim() !== '') {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : null;
+    }
+    return null;
+}
+
+function summarize(values: number[], method: AggregationMethod): number | null {
+    if (!values.length) return null;
+
+    if (method === 'sum') return values.reduce((acc, v) => acc + v, 0);
+    if (method === 'avg') return values.reduce((acc, v) => acc + v, 0) / values.length;
+    if (method === 'median') {
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        if (sorted.length % 2 === 0) {
+            return (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+        return sorted[mid];
+    }
+
+    // "last" should be handled by caller using timestamp ordering
+    return values[values.length - 1];
+}
+
+export function pickAutoAggregationInterval(data: TimeSeriesPoint[]): AggregationInterval | null {
+    if (!data.length) return null;
+    const first = parseISO(data[0].date);
+    const last = parseISO(data[data.length - 1].date);
+    if (Number.isNaN(first.getTime()) || Number.isNaN(last.getTime())) return null;
+
+    const rangeDays = Math.max(0, differenceInDays(last, first));
+    if (rangeDays >= 365 * 5) return 'year';
+    if (rangeDays >= 365) return 'month';
+    if (rangeDays >= 120) return 'week';
+    return null;
+}
+
+export function aggregateDailySeries(
+    data: TimeSeriesPoint[],
+    keys: string[],
+    interval: AggregationInterval,
+    method: AggregationMethod = 'avg'
+): TimeSeriesPoint[] {
+    if (!data.length || keys.length === 0) return data;
+
+    const buckets = new Map<string, {
+        start: Date;
+        values: Record<string, number[]>;
+        last: Record<string, { time: number; val: number }>;
+    }>();
+
+    for (const point of data) {
+        const date = parseISO(point.date);
+        if (Number.isNaN(date.getTime())) continue;
+
+        let bucketStart: Date;
+        if (interval === 'week') bucketStart = startOfWeek(date, { weekStartsOn: 1 });
+        else if (interval === 'month') bucketStart = startOfMonth(date);
+        else bucketStart = startOfYear(date);
+
+        for (const key of keys) {
+            const rawValue = point[key] ?? (keys[0] === key ? point.value : undefined);
+            const value = toNumber(rawValue);
+            if (value === null) continue;
+
+            const bucketKey = format(bucketStart, 'yyyy-MM-dd');
+            let bucket = buckets.get(bucketKey);
+            if (!bucket) {
+                bucket = { start: bucketStart, values: {}, last: {} };
+                buckets.set(bucketKey, bucket);
+            }
+
+            if (!bucket.values[key]) bucket.values[key] = [];
+            bucket.values[key].push(value);
+
+            const time = date.getTime();
+            const existing = bucket.last[key];
+            if (!existing || time >= existing.time) {
+                bucket.last[key] = { time, val: value };
+            }
+        }
+    }
+
+    const sortedBuckets = Array.from(buckets.entries())
+        .sort((a, b) => a[1].start.getTime() - b[1].start.getTime());
+
+    return sortedBuckets.map(([bucketKey, bucket]) => {
+        const aggregated: TimeSeriesPoint = {
+            date: bucketKey,
+            value: null
+        };
+
+        for (const key of keys) {
+            const values = bucket.values[key] || [];
+            let val: number | null;
+            if (method === 'last') {
+                val = bucket.last[key]?.val ?? null;
+            } else {
+                val = summarize(values, method);
+            }
+
+            aggregated[key] = val;
+            if (key === keys[0]) {
+                aggregated.value = val;
+            }
+        }
+
+        return aggregated;
+    });
+}
 
 export function normalizeTimeSeriesData(
     data: any[],

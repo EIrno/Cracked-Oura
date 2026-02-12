@@ -7,7 +7,7 @@ import type { WidgetInstance } from '@/types';
 import { subDays, subYears, format } from 'date-fns';
 
 import { isIntradayKey } from "@/lib/utils";
-import { normalizeTimeSeriesData } from '@/lib/data-processing';
+import { aggregateDailySeries, normalizeTimeSeriesData, pickAutoAggregationInterval } from '@/lib/data-processing';
 
 interface SmartTrendWidgetCanvasProps {
     widget: WidgetInstance;
@@ -117,6 +117,22 @@ export function SmartTrendWidgetCanvas({ widget, date, chartType = 'area' }: Sma
         );
     }, [data, selectedDayIndex, keysToFetch, startDate, endDate]);
 
+    const aggregatedData = useMemo(() => {
+        if (!processedData.data.length) return processedData;
+        if (processedData.isIntraday) return processedData;
+
+        const rangeType = widget.config.dateRange?.type;
+        if (rangeType !== 'all') return processedData;
+
+        const interval = pickAutoAggregationInterval(processedData.data);
+        if (!interval) return processedData;
+
+        return {
+            ...processedData,
+            data: aggregateDailySeries(processedData.data, keysToFetch, interval, 'avg')
+        };
+    }, [processedData, keysToFetch, widget.config.dateRange?.type]);
+
     if (keysToFetch.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
@@ -129,7 +145,7 @@ export function SmartTrendWidgetCanvas({ widget, date, chartType = 'area' }: Sma
     if (loading) return <div className="flex items-center justify-center h-full text-xs text-muted-foreground">Loading...</div>;
     if (error) return <div className="flex items-center justify-center h-full text-xs text-destructive">Error: {error}</div>;
 
-    if (processedData.data.length === 0) {
+    if (aggregatedData.data.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
                 <span className="text-sm font-medium">No data for this period</span>
@@ -144,20 +160,20 @@ export function SmartTrendWidgetCanvas({ widget, date, chartType = 'area' }: Sma
         <div className="h-full flex flex-col relative group">
             {chartType === 'bar' ? (
                 <BarChartCanvas
-                    data={processedData.data}
+                    data={aggregatedData.data}
                     dataKey={keysToFetch[0]}
                     categoryKey="date"
                     color={widget.config.color || '#8AB4F8'}
                 />
             ) : chartType === 'table' ? (
                 <TableWidget
-                    data={processedData.data}
+                    data={aggregatedData.data}
                     dataKeys={keysToFetch}
                     selectedDate={date}
                 />
             ) : (
                 <TrendChartCanvas
-                    data={processedData.data}
+                    data={aggregatedData.data}
                     dataKey={keysToFetch[0]}
                     dataKeys={keysToFetch}
                     title={widget.title}
