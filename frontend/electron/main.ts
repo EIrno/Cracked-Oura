@@ -2,7 +2,7 @@ import { app, BrowserWindow, Tray, Menu, nativeImage } from 'electron';
 import path from 'path';
 import { spawn, ChildProcess } from 'child_process';
 
-let mainWindow: BrowserWindow | null;
+let mainWindow: BrowserWindow | null = null;
 let pythonProcess: ChildProcess | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
@@ -38,12 +38,7 @@ function createTray() {
         {
             label: 'Open Dashboard',
             click: () => {
-                if (mainWindow) {
-                    mainWindow.show();
-                    mainWindow.focus();
-                } else {
-                    createWindow();
-                }
+                showOrCreateWindow();
             }
         },
         { type: 'separator' },
@@ -59,10 +54,7 @@ function createTray() {
     tray.setContextMenu(contextMenu);
 
     tray.on('double-click', () => {
-        if (mainWindow) {
-            mainWindow.show();
-            mainWindow.focus();
-        }
+        showOrCreateWindow();
     });
 }
 
@@ -119,6 +111,16 @@ function createWindow() {
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
+}
+
+function showOrCreateWindow() {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        return;
+    }
+
+    createWindow();
 }
 
 function getPythonPath(): string {
@@ -246,11 +248,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-    if (mainWindow === null) {
-        createWindow();
-    } else {
-        mainWindow.show();
-    }
+    showOrCreateWindow();
 });
 
 app.on('before-quit', () => {
