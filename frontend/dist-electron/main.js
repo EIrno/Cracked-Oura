@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const child_process_1 = require("child_process");
-let mainWindow;
+let mainWindow = null;
 let pythonProcess = null;
 let tray = null;
 let isQuitting = false;
@@ -36,13 +36,7 @@ function createTray() {
         {
             label: 'Open Dashboard',
             click: () => {
-                if (mainWindow) {
-                    mainWindow.show();
-                    mainWindow.focus();
-                }
-                else {
-                    createWindow();
-                }
+                showOrCreateWindow();
             }
         },
         { type: 'separator' },
@@ -56,10 +50,7 @@ function createTray() {
     ]);
     tray.setContextMenu(contextMenu);
     tray.on('double-click', () => {
-        if (mainWindow) {
-            mainWindow.show();
-            mainWindow.focus();
-        }
+        showOrCreateWindow();
     });
 }
 function createWindow() {
@@ -109,6 +100,14 @@ function createWindow() {
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
+}
+function showOrCreateWindow() {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        return;
+    }
+    createWindow();
 }
 function getPythonPath() {
     if (!isDev) {
@@ -226,12 +225,7 @@ electron_1.app.on('window-all-closed', () => {
     }
 });
 electron_1.app.on('activate', () => {
-    if (mainWindow === null) {
-        createWindow();
-    }
-    else {
-        mainWindow.show();
-    }
+    showOrCreateWindow();
 });
 electron_1.app.on('before-quit', () => {
     isQuitting = true;

@@ -38,7 +38,7 @@ class ConfigManager:
                 "is_active": True,
                 "headless": True,
                 "llm_model": "llama3.1:latest",
-                "llm_host": "http://localhost:11434"
+                "llm_host": os.getenv("OLLAMA_HOST", "http://localhost:11434")
             }
             self._save_file(self.config_path, default_config)
 

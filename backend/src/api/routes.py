@@ -195,9 +195,18 @@ async def download_export(db: Session = Depends(get_db)):
         with tempfile.TemporaryDirectory() as temp_dir:
             zip_path = await automator.download_existing_export(temp_dir)
             
-            if isinstance(zip_path, dict) and zip_path.get("status") == "error":
+            # download_existing_export() returns a status dict instead of a path
+            # when it cannot get to the export page. Passing that dict on to the
+            # parser used to surface as "'dict' object has no attribute 'seek'".
+            if isinstance(zip_path, dict):
+                if zip_path.get("status") == "otp_required":
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Login required: Oura sent a verification code. "
+                               "Submit it before retrying the download.",
+                    )
                 raise HTTPException(status_code=500, detail=f"Download failed: {zip_path.get('message')}")
-            
+
             if not zip_path:
                 raise HTTPException(status_code=500, detail="Download failed: Button not found or timeout.")
 

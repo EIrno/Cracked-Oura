@@ -1,6 +1,8 @@
 import asyncio
 import os
 import logging
+import re
+import shutil
 from playwright.async_api import async_playwright, expect, Page, BrowserContext, Browser
 from typing import Optional, Dict, Any, Union
 
@@ -9,6 +11,15 @@ from .config import config_manager
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("OuraAutomator")
+
+# Oura's "choose a verification method" screen renders one button per method and
+# they all share name='selectedId'. Passkeys need a platform authenticator and
+# can never work in an automated browser, so they are excluded first.
+_PASSKEY_RE = re.compile(r"passkey|pass\s?key|\ud328\uc2a4\ud0a4|\u30d1\u30b9\u30ad\u30fc", re.I)
+_EMAIL_CODE_RE = re.compile(
+    r"e-?mail|code|koodi|\ucf54\ub4dc|\u30b3\u30fc\u30c9|c\u00f3digo|codigo|codice|kod",
+    re.I,
+)
 
 class OuraAutomator:
     """
@@ -21,18 +32,31 @@ class OuraAutomator:
         self.page: Optional[Page] = None
         self.playwright = None
         self._is_initialized = False
-        self.storage_state_path = os.path.join(os.getcwd(), "oura_session.json")
         self.email: Optional[str] = None
         self.password: Optional[str] = None
         self.base_url = "https://membership.ouraring.com"
         self.export_url = f"{self.base_url}/data-export"
 
-        # Configure Playwright Browser Path
+        # Configure persistent paths inside user data directory
         from .paths import get_user_data_dir
-        
-        # Use a writable directory for browsers
-        self.browser_dir = os.path.join(get_user_data_dir(), "browsers")
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = self.browser_dir
+
+        user_data_dir = str(get_user_data_dir())
+        self.storage_state_path = os.path.join(user_data_dir, "oura_session.json")
+        legacy_session = os.path.join(os.getcwd(), "oura_session.json")
+        if not os.path.exists(self.storage_state_path) and os.path.exists(legacy_session):
+            try:
+                shutil.copy2(legacy_session, self.storage_state_path)
+            except Exception as e:
+                logger.warning(f"Failed to migrate legacy session file: {e}")
+                self.storage_state_path = legacy_session
+
+        # Respect pre-configured browser path (e.g., inside Docker image)
+        env_browser_dir = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        if env_browser_dir:
+            self.browser_dir = env_browser_dir
+        else:
+            self.browser_dir = os.path.join(user_data_dir, "browsers")
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = self.browser_dir
 
     async def initialize(self, headless: Optional[bool] = None):
         """Initializes the Playwright browser session."""
@@ -46,7 +70,10 @@ class OuraAutomator:
         if headless is None:
             config = config_manager.get_config()
             headless = config.get("headless", True)
-        
+
+        if os.environ.get("CRACKED_OURA_FORCE_HEADLESS") == "1":
+            headless = True
+
         # Load credentials from config if not already set
         if not self.email:
             config = config_manager.get_config()
@@ -55,14 +82,18 @@ class OuraAutomator:
 
         logger.info(f"Initializing Playwright (Headless: {headless})")
         self.playwright = await async_playwright().start()
-        
+
+        launch_args = ["--start-maximized", "--disable-dev-shm-usage"]
+        if os.path.exists("/.dockerenv") or os.environ.get("CRACKED_OURA_NO_SANDBOX") == "1":
+            launch_args.extend(["--no-sandbox", "--disable-setuid-sandbox"])
+
         try:
-            self.browser = await self.playwright.chromium.launch(headless=headless, args=["--start-maximized"])
+            self.browser = await self.playwright.chromium.launch(headless=headless, args=launch_args)
         except Exception as e:
             logger.error(f"Failed to launch browser: {e}")
             logger.info("Retrying installation...")
             await self._ensure_browser_installed(force=True)
-            self.browser = await self.playwright.chromium.launch(headless=headless, args=["--start-maximized"])
+            self.browser = await self.playwright.chromium.launch(headless=headless, args=launch_args)
         
         # Load session if exists
         state = self.storage_state_path if os.path.exists(self.storage_state_path) else None
@@ -153,10 +184,12 @@ class OuraAutomator:
 
     # --- Login Logic ---
 
-    async def login(self) -> Union[None, Dict[str, str]]:
+    async def login(self) -> Dict[str, str]:
         """
         Executes the login flow.
-        Returns None if already logged in, or a status dictionary if further action (like OTP) is needed.
+
+        Always returns a status dictionary. Returning None here crashed the UI,
+        which reads `.message` off this response unconditionally.
         """
         if not self.page:
             raise Exception("Page not initialized")
@@ -174,7 +207,7 @@ class OuraAutomator:
             if self._is_logged_in():
                 logger.info("Already logged in.")
                 await self.save_context()
-                return
+                return {"status": "success", "message": "Already logged in."}
 
             logger.info("Not logged in. Attempting login...")
             if not self.email:
@@ -249,19 +282,53 @@ class OuraAutomator:
         
         await self.page.wait_for_timeout(3000)
 
+    async def _find_verification_method_button(self):
+        """
+        Picks the e-mail option on Oura's "choose a verification method" screen.
+
+        Every method button shares name='selectedId', so an unqualified locator
+        matches several elements and trips Playwright's strict mode. Passkey
+        options are dropped because they cannot be driven from an automated
+        browser; among the rest an e-mail/code label wins, and otherwise we take
+        the last option, which is where Oura lists the fallback method.
+        """
+        buttons = await self.page.locator("button[name='selectedId']").all()
+
+        visible = []
+        for btn in buttons:
+            try:
+                if await btn.is_visible():
+                    visible.append((btn, ((await btn.inner_text()) or "").strip()))
+            except Exception:
+                continue
+
+        if not visible:
+            return None
+
+        usable = [(b, t) for b, t in visible if not _PASSKEY_RE.search(t)] or visible
+
+        for btn, text in usable:
+            if _EMAIL_CODE_RE.search(text):
+                logger.info(f"Verification method selected: {text!r}")
+                return btn
+
+        btn, text = usable[-1]
+        logger.info(f"No e-mail label matched; falling back to: {text!r}")
+        return btn
+
     async def _check_otp_screen(self):
         """Checks if OTP screen is active and handles the 'Send Code' intermediate step if present."""
-        # Check for "Send code" intermediate page
-        intermediate_btn = self.page.locator("button[name='selectedId']")
-        otp_input_name = self.page.locator("input[name='otp']")
-        otp_input_id = self.page.locator("#otp-code")
+        otp_input_name = self.page.locator("input[name='otp']").first
+        otp_input_id = self.page.locator("#otp-code").first
 
-        if await intermediate_btn.is_visible() and \
-           not await otp_input_name.is_visible() and \
+        # Check for "Send code" intermediate page
+        if not await otp_input_name.is_visible() and \
            not await otp_input_id.is_visible():
-            logger.info("Found intermediate 'Send Code' button. Clicking...")
-            await intermediate_btn.click()
-            await self.page.wait_for_timeout(3000)
+            intermediate_btn = await self._find_verification_method_button()
+            if intermediate_btn is not None:
+                logger.info("Found intermediate 'Send Code' button. Clicking...")
+                await intermediate_btn.click()
+                await self.page.wait_for_timeout(3000)
 
         # Check for OTP input visibility
         if await otp_input_name.is_visible() or await otp_input_id.is_visible():
@@ -460,48 +527,80 @@ class OuraAutomator:
             logger.error(f"Click failed: {e}")
             return False
 
+    async def _download_button(self):
+        """Returns a visible download control on the export page, or None."""
+        selectors = [
+            "button[aria-label='Download data']",
+            "a[aria-label='Download data']",
+            "button[aria-label*='ownload']",
+            "a[aria-label*='ownload']",
+            "a[download]",
+        ]
+        for selector in selectors:
+            locator = self.page.locator(selector).first
+            try:
+                if await locator.is_visible():
+                    return locator
+            except Exception:
+                continue
+        return None
+
     async def _wait_for_processing(self) -> bool:
-        """Polls until the request button is re-enabled, indicating report generation is complete."""
-        max_retries = 30 # Approx 2.5 hours total wait time
-        poll_interval = 300 # 5 minutes between checks
-        
+        """
+        Polls until the export is actually downloadable.
+
+        The old heuristic asked whether the Request button was enabled again and
+        treated that as "ready". Oura leaves that button enabled right after it
+        is clicked, and the generic 'main button' fallback matches almost any
+        button on the page, so this reported success within seconds and the
+        caller then failed to find a download button that would not exist for
+        hours. Poll for the download control itself instead -- it is the only
+        signal that the archive actually exists.
+        """
+        max_retries = 30      # ~2.5 hours total
+        poll_interval = 300   # 5 minutes between checks
+
         for i in range(max_retries):
-            # Check if Request button is enabled again (indicating download is ready)
-            request_btn = self.page.locator('[data-testid="pageSubtitle"] + button').first
-            if not await request_btn.is_visible():
-                request_btn = self.page.locator('main button').first
-            
-            if await request_btn.is_visible() and await request_btn.is_enabled():
-                return True # Export is ready
-            
-            logger.info(f"Processing... (Attempt {i+1}/{max_retries}) - Next check in {poll_interval}s")
+            if await self._download_button() is not None:
+                logger.info("Export is ready for download.")
+                return True
+
+            logger.info(
+                f"Export still processing... (Attempt {i+1}/{max_retries}) "
+                f"- Next check in {poll_interval}s"
+            )
             await self.page.wait_for_timeout(poll_interval * 1000)
-            await self.page.reload()
-            await self.page.wait_for_load_state("networkidle")
-            
+            try:
+                await self.page.reload()
+                await self.page.wait_for_load_state("networkidle", timeout=30000)
+            except Exception as e:
+                logger.warning(f"Reload while waiting for export failed: {e}")
+
+        logger.warning("Export did not become downloadable within the wait window.")
         return False
 
     async def _download_file(self, save_dir: str) -> Optional[str]:
         """Finds the download button and handles the file save dialog."""
-        download_btn = self.page.locator("button[aria-label='Download data']").first
-        try:
-            await download_btn.wait_for(state="visible", timeout=10000)
-        except:
-            pass 
-            
-        if await download_btn.is_visible():
-            logger.info("Download button found. Clicking...")
-            async with self.page.expect_download() as download_info:
-                await download_btn.click()
-            
-            download = await download_info.value
-            filename = download.suggested_filename
-            save_path = os.path.join(save_dir, filename)
-            await download.save_as(save_path)
-            logger.info(f"Downloaded to {save_path}")
-            return save_path
-        
-        logger.warning("Download button not found.")
-        return None
+        download_btn = await self._download_button()
+        if download_btn is None:
+            # Give a slow-rendering page one more chance before giving up.
+            await self.page.wait_for_timeout(10000)
+            download_btn = await self._download_button()
+
+        if download_btn is None:
+            logger.warning("Download button not found.")
+            return None
+
+        logger.info("Download button found. Clicking...")
+        # The archive can be large; allow well over Playwright's 30s default.
+        async with self.page.expect_download(timeout=600000) as download_info:
+            await download_btn.click()
+
+        download = await download_info.value
+        filename = download.suggested_filename
+        save_path = os.path.join(save_dir, filename)
+        await download.save_as(save_path)
+        logger.info(f"Downloaded to {save_path}")
+        return save_path
 
 automator = OuraAutomator()

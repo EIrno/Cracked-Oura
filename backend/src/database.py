@@ -27,11 +27,16 @@ try:
     os.remove(test_file)
 
 except Exception as e:
-    # CRITICAL: Write crash report to Documents
+    # CRITICAL: Write crash report to Documents when writable, fallback to stderr
     crash_file = os.path.expanduser("~/Documents/cracked_oura_backend_crash.txt")
-    with open(crash_file, "w", encoding="utf-8") as f:
-        f.write(f"Database Config CRASH: {e}\n")
-        f.write(traceback.format_exc())
+    try:
+        os.makedirs(os.path.dirname(crash_file), exist_ok=True)
+        with open(crash_file, "w", encoding="utf-8") as f:
+            f.write(f"Database Config CRASH: {e}\n")
+            f.write(traceback.format_exc())
+    except Exception as write_err:
+        print(f"Database Config CRASH: {e}\n{traceback.format_exc()}", file=sys.stderr)
+        print(f"Additionally failed to write crash file {crash_file}: {write_err}", file=sys.stderr)
     sys.exit(1)
 
 # --- SQLAlchemy Setup ---

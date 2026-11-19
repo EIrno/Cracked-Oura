@@ -373,15 +373,15 @@ async def background_worker():
 from fastapi.staticfiles import StaticFiles
 import os
 
-# Robustly find the frontend/dist directory relative to this file
-# engine/src/api/main.py -> ../../../frontend/dist
+# Robustly find the frontend/dist directory (env override or relative path)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-dist_dir = os.path.join(current_dir, "../../../frontend/dist")
+dist_dir = os.getenv("FRONTEND_DIST_DIR") or os.path.join(current_dir, "../../../frontend/dist")
 
 if os.path.exists(dist_dir):
+    logger.info(f"Mounting frontend static files from {dist_dir}")
     app.mount("/", StaticFiles(directory=dist_dir, html=True), name="static")
 else:
-    pass
+    logger.warning(f"Frontend dist directory not found at {dist_dir}; API-only mode.")
 
 
 if __name__ == "__main__":

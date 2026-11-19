@@ -22,3 +22,6 @@ oura-downloads/
 # IDE
 .vscode/
 .idea/
+
+# Docker persistent data
+/data/

@@ -1,0 +1,21 @@
+services:
+  cracked-oura:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cracked-oura:latest
+    container_name: cracked-oura
+    restart: unless-stopped
+    shm_size: "1gb"
+    ports:
+      - "${CRACKED_OURA_PORT:-8000}:8000"
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-Europe/Rome}"
+      CRACKED_OURA_DATA_DIR: "/data"
+      OLLAMA_HOST: "${OLLAMA_HOST:-http://host.docker.internal:11434}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - "${CRACKED_OURA_DATA_PATH:-./data}:/data"
