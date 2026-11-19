@@ -93,14 +93,14 @@ cd Cracked-Oura
 cp .env.example .env
 
 # 3. Build and start in the background
-./start.sh
+./DockerStart.sh
 # Or: make start
 # Or directly: docker compose up -d --build
 ```
 
 - Open `http://localhost:8000` in your browser.
 - Persistent state (`oura_database.db`, `oura_config.json`, `oura_dashboard.json`, `oura_session.json`, and `backend_debug.log`) is stored in `./data` (or `CRACKED_OURA_DATA_PATH` from `.env`).
-- Stop with `./stop.sh` (or `make stop` / `docker compose down`).
+- Stop with `./DockerStop.sh` (or `make stop` / `docker compose down`).
 
 ---
 

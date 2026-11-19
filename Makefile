@@ -27,14 +27,14 @@ build-docker:
 	$(COMPOSE) build
 
 start up:
-	./start.sh
+	./DockerStart.sh
 
 stop down:
-	./stop.sh
+	./DockerStop.sh
 
 restart:
-	./stop.sh
-	./start.sh --build
+	./DockerStop.sh
+	./DockerStart.sh --build
 
 status:
 	$(COMPOSE) ps

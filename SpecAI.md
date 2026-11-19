@@ -7,7 +7,7 @@ Cracked Oura is an open-source application designed to give users complete local
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS (`frontend/`), optionally wrapped by Electron (`frontend/electron/main.ts`).
 - **Backend**: FastAPI on Python 3.12 (`backend/src/`) with SQLite local storage, Playwright Chromium automation for Oura data export, and optional LangChain + Ollama AI advisor (`backend/src/llm.py`).
 - **Desktop Packaging**: PyInstaller (`backend/build.spec`) + `electron-builder` creating Linux AppImage and `.deb` packages (plus macOS / Windows targets).
-- **Containerized Deployment**: Multi-stage `Dockerfile` (`node:22-slim` frontend builder + `python:3.12-slim-bookworm` runtime with pre-installed Chromium) orchestrated from the repository root (`docker-compose.yml`, `start.sh`, `stop.sh`, `Makefile`).
+- **Containerized Deployment**: Multi-stage `Dockerfile` (`node:22-slim` frontend builder + `python:3.12-slim-bookworm` runtime with pre-installed Chromium) orchestrated from the repository root (`docker-compose.yml`, `DockerStart.sh`, `DockerStop.sh`, `Makefile`).
 
 ---
 
@@ -43,7 +43,7 @@ All orchestration files reside in the project root (`/home/gelma/dev/prg/Cracked
 - `docker-entrypoint.sh`: Ensures `$CRACKED_OURA_DATA_DIR` (`/data`) ownership matches `${PUID}:${PGID}` and drops root privileges via `setpriv` before starting `uvicorn`.
 - `docker-compose.yml`: Exposes port `${CRACKED_OURA_PORT:-8000}:8000`, mounts `${CRACKED_OURA_DATA_PATH:-./data}:/data`, sets `shm_size: "1gb"` for Chromium, and maps `host.docker.internal:host-gateway` for local Ollama.
 - `.dockerignore` & `.env.example`: Build context exclusions and environment template (`CRACKED_OURA_PORT`, `CRACKED_OURA_DATA_PATH`, `PUID`, `PGID`, `TZ`, `OLLAMA_HOST`).
-- `start.sh` & `stop.sh`: Strict-mode (`set -euo pipefail`) scripts supporting both `docker compose` v2 and `docker-compose` v1, automatically preparing `./data` with host UID/GID ownership.
+- `DockerStart.sh` & `DockerStop.sh`: Strict-mode (`set -euo pipefail`) scripts supporting both `docker compose` v2 and `docker-compose` v1, automatically preparing `./data` with host UID/GID ownership.
 - `Makefile`: Root entrypoints (`install`, `dev`, `build-docker`, `start`, `stop`, `restart`, `status`, `logs`, `build-frontend`, `build-backend`, `build-desktop`).
 - `.gitignore`: Ignores `/data/`.
 - `README.md`: Added "Run with Docker" documentation.
@@ -60,4 +60,4 @@ All orchestration files reside in the project root (`/home/gelma/dev/prg/Cracked
    - Direct `docker compose up -d` (without pre-creating `./data`) started healthy on port `8000` in 4s, running `uvicorn` as UID/GID `1000:1000` (verified via `/proc/1/status`).
    - `GET /` returned the React SPA (`<title>Cracked Oura</title>`), `GET /api/settings` returned valid JSON, and `GET /api/schema` returned all 13 database model schemas.
    - `automator.initialize(headless=True)` and `automator.cleanup()` succeeded as non-root UID/GID with `PLAYWRIGHT_OK /ms-playwright /data/oura_session.json`.
-   - `POST /api/settings` persisted `./data/oura_config.json`, `./data/oura_dashboard.json`, `./data/oura_database.db`, and `./data/backend_debug.log` owned by the host user across `./stop.sh` -> `./start.sh`. Synthetic test `./data` was cleaned up afterward.
+   - `POST /api/settings` persisted `./data/oura_config.json`, `./data/oura_dashboard.json`, `./data/oura_database.db`, and `./data/backend_debug.log` owned by the host user across `./DockerStop.sh` -> `./DockerStart.sh`. Synthetic test `./data` was cleaned up afterward.
