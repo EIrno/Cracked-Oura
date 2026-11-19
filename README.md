@@ -80,6 +80,30 @@ Cracked Oura can leverage local LLMs to analyze your health data and provide ins
 
 ---
 
+### Run with Docker (Any Linux Distro / macOS / Windows)
+
+You can compile and run the entire application (React frontend, FastAPI backend, SQLite database, and headless Playwright Chromium) inside Docker with zero host dependencies:
+
+```bash
+# 1. Clone Repository
+git clone https://github.com/EIrno/Cracked-Oura.git
+cd Cracked-Oura
+
+# 2. (Optional) Customize port, data directory, UID/GID, timezone, or Ollama host
+cp .env.example .env
+
+# 3. Build and start in the background
+./start.sh
+# Or: make start
+# Or directly: docker compose up -d --build
+```
+
+- Open `http://localhost:8000` in your browser.
+- Persistent state (`oura_database.db`, `oura_config.json`, `oura_dashboard.json`, `oura_session.json`, and `backend_debug.log`) is stored in `./data` (or `CRACKED_OURA_DATA_PATH` from `.env`).
+- Stop with `./stop.sh` (or `make stop` / `docker compose down`).
+
+---
+
 ## For Developers
 
 We welcome contributions.
