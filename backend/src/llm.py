@@ -5,7 +5,7 @@ from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_core.callbacks import StreamingStdOutCallbackHandler
 from backend.src.config import config_manager
-import os
+from backend.src.database import DB_PATH
 import os
 
 class DataAnalyst:
@@ -14,7 +14,7 @@ class DataAnalyst:
         
         # 1. Initialize LLM
         self.llm = ChatOllama(
-            base_url=cfg.get("llm_host", "http://localhost:11434"),
+            base_url=os.getenv("OLLAMA_HOST") or cfg.get("llm_host", "http://localhost:11434"),
             model=cfg.get("llm_model", "llama3.1"),
             temperature=0,
             streaming=True,
@@ -22,9 +22,7 @@ class DataAnalyst:
         )
         
         # 2. Initialize Database
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        db_path = os.path.join(base_dir, "oura_database.db")
-        self.db = SQLDatabase.from_uri(f"sqlite:///{db_path}")
+        self.db = SQLDatabase.from_uri(f"sqlite:///{DB_PATH}")
 
         # 3. Initialize Tools
         # Safe Subclass to prevent hallucinations

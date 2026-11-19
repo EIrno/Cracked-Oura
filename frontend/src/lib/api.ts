@@ -1,4 +1,8 @@
-const BASE_URL = 'http://localhost:8000';
+export const BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ||
+    (typeof window !== 'undefined' && window.location.protocol === 'file:'
+        ? 'http://localhost:8000'
+        : '');
 
 export interface AutomationStatusResponse {
     status: 'idle' | 'login_needed' | 'otp_needed' | 'logged_in' | 'exporting' | 'ready_to_download' | 'downloading' | 'completed' | 'error';

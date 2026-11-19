@@ -2,6 +2,7 @@ import asyncio
 import os
 import logging
 import re
+import shutil
 from playwright.async_api import async_playwright, expect, Page, BrowserContext, Browser
 from typing import Optional, Dict, Any, Union
 
@@ -31,18 +32,31 @@ class OuraAutomator:
         self.page: Optional[Page] = None
         self.playwright = None
         self._is_initialized = False
-        self.storage_state_path = os.path.join(os.getcwd(), "oura_session.json")
         self.email: Optional[str] = None
         self.password: Optional[str] = None
         self.base_url = "https://membership.ouraring.com"
         self.export_url = f"{self.base_url}/data-export"
 
-        # Configure Playwright Browser Path
+        # Configure persistent paths inside user data directory
         from .paths import get_user_data_dir
-        
-        # Use a writable directory for browsers
-        self.browser_dir = os.path.join(get_user_data_dir(), "browsers")
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = self.browser_dir
+
+        user_data_dir = str(get_user_data_dir())
+        self.storage_state_path = os.path.join(user_data_dir, "oura_session.json")
+        legacy_session = os.path.join(os.getcwd(), "oura_session.json")
+        if not os.path.exists(self.storage_state_path) and os.path.exists(legacy_session):
+            try:
+                shutil.copy2(legacy_session, self.storage_state_path)
+            except Exception as e:
+                logger.warning(f"Failed to migrate legacy session file: {e}")
+                self.storage_state_path = legacy_session
+
+        # Respect pre-configured browser path (e.g., inside Docker image)
+        env_browser_dir = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        if env_browser_dir:
+            self.browser_dir = env_browser_dir
+        else:
+            self.browser_dir = os.path.join(user_data_dir, "browsers")
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = self.browser_dir
 
     async def initialize(self, headless: Optional[bool] = None):
         """Initializes the Playwright browser session."""
@@ -56,7 +70,10 @@ class OuraAutomator:
         if headless is None:
             config = config_manager.get_config()
             headless = config.get("headless", True)
-        
+
+        if os.environ.get("CRACKED_OURA_FORCE_HEADLESS") == "1":
+            headless = True
+
         # Load credentials from config if not already set
         if not self.email:
             config = config_manager.get_config()
@@ -65,14 +82,18 @@ class OuraAutomator:
 
         logger.info(f"Initializing Playwright (Headless: {headless})")
         self.playwright = await async_playwright().start()
-        
+
+        launch_args = ["--start-maximized", "--disable-dev-shm-usage"]
+        if os.path.exists("/.dockerenv") or os.environ.get("CRACKED_OURA_NO_SANDBOX") == "1":
+            launch_args.extend(["--no-sandbox", "--disable-setuid-sandbox"])
+
         try:
-            self.browser = await self.playwright.chromium.launch(headless=headless, args=["--start-maximized"])
+            self.browser = await self.playwright.chromium.launch(headless=headless, args=launch_args)
         except Exception as e:
             logger.error(f"Failed to launch browser: {e}")
             logger.info("Retrying installation...")
             await self._ensure_browser_installed(force=True)
-            self.browser = await self.playwright.chromium.launch(headless=headless, args=["--start-maximized"])
+            self.browser = await self.playwright.chromium.launch(headless=headless, args=launch_args)
         
         # Load session if exists
         state = self.storage_state_path if os.path.exists(self.storage_state_path) else None

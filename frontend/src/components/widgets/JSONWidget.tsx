@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ChevronRight, ChevronDown, Loader2 } from "lucide-react";
+import { BASE_URL } from "@/lib/api";
 
 interface JSONWidgetProps {
     data: any;
@@ -65,7 +66,7 @@ export function JSONWidget({ data, date, fetchFullDump }: JSONWidgetProps) {
     useEffect(() => {
         if (fetchFullDump && date) {
             setLoading(true);
-            fetch(`http://localhost:8000/api/days/${date}?include_details=true`)
+            fetch(`${BASE_URL}/api/days/${date}?include_details=true`)
                 .then(res => res.json())
                 .then(json => {
                     setFullData(json);
