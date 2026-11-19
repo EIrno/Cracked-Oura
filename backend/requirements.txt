@@ -15,3 +15,5 @@ langchain-ollama
 langchain-experimental
 faiss-cpu
 pydantic>=2.0.0
+pyinstaller
+
