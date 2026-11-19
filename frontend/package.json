@@ -3,7 +3,15 @@
   "private": true,
   "version": "0.0.0",
   "description": "Cracked Oura Dashboard",
-  "author": "Elmo Ahorinta",
+  "author": {
+    "name": "Elmo Ahorinta",
+    "email": "elmo.ahorinta@gmail.com"
+  },
+  "homepage": "https://github.com/EIrno/Cracked-Oura",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EIrno/Cracked-Oura.git"
+  },
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
